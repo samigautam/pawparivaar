@@ -1,25 +1,23 @@
+<!-- Move all HTML/CSS content below PHP -->
 <style>
-    #uni_modal .modal-content>.modal-footer,#uni_modal .modal-content>.modal-header{
-        display:none;
+    #uni_modal .modal-content>.modal-footer, #uni_modal .modal-content>.modal-header {
+        display: none;
     }
 </style>
 <div class="container-fluid">
-    <form action="" id="registration">
+    <form action="javascript:void(0);" method="POST" id="registration">
         <div class="row">
-        
-        <h3 class="text-center">Create New Account
-            <span class="float-right">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-                </button>
-            </span>
-        </h3>
+            <h3 class="text-center">Create New Account
+                <span class="float-right">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </span>
+            </h3>
             <hr>
         </div>
-        <div class="row  align-items-center h-100">
-            
+        <div class="row align-items-center h-100">
             <div class="col-lg-5 border-right">
-                
                 <div class="form-group">
                     <label for="" class="control-label">Firstname</label>
                     <input type="text" class="form-control form-control-sm form" name="firstname" required>
@@ -60,48 +58,50 @@
             </div>
         </div>
     </form>
-
 </div>
+
 <script>
-    $(function(){
-        $('#login-show').click(function(){
-            uni_modal("","login.php")
-        })
-        $('#registration').submit(function(e){
-            e.preventDefault();
-            start_loader()
-            if($('.err-msg').length > 0)
+    $(function () {
+        $('#login-show').click(function () {
+            uni_modal("", "login.php")
+        });
+
+        $('#registration').submit(function (e) {
+            e.preventDefault(); // Prevent default form submission behavior
+            start_loader(); // Start the loading indicator
+
+            if ($('.err-msg').length > 0) {
                 $('.err-msg').remove();
+            }
+
             $.ajax({
-                url:_base_url_+"classes/Master.php?f=register",
-                method:"POST",
-                data:$(this).serialize(),
-                dataType:"json",
-                error:err=>{
-                    console.log(err)
-                    alert_toast("an error occured",'error')
-                    end_loader()
+                url: "send_email.php", // Send the request to send_email.php
+                method: "POST", // Use POST method
+                data: $(this).serialize(), // Serialize the form data
+                dataType: "json", // Expect a JSON response
+                error: function (err) {
+                    console.log(err); // Log any errors
+                    alert_toast("An error occurred", 'error'); // Show error alert
+                    end_loader(); // End loading indicator
                 },
-                success:function(resp){
-                    if(typeof resp == 'object' && resp.status == 'success'){
-                        alert_toast("Account succesfully registered",'success')
-                        setTimeout(function(){
-                            location.reload()
-                        },2000)
-                    }else if(resp.status == 'failed' && !!resp.msg){
-                        var _err_el = $('<div>')
-                            _err_el.addClass("alert alert-danger err-msg").text(resp.msg)
-                        $('[name="password"]').after(_err_el)
-                        end_loader()
-                        
-                    }else{
-                        console.log(resp)
-                        alert_toast("an error occured",'error')
-                        end_loader()
+                success: function (resp) {
+                    if (typeof resp === 'object' && resp.status === 'success') {
+                        alert_toast(resp.msg, 'success');
+                        setTimeout(function () {
+                            window.location.href = "http://localhost/pawparivaar/"; // Redirect to the dashboard
+                        }, 3000); // Delay for 3 seconds
+                    } else if (resp.status === 'failed' && resp.msg) {
+                        var _err_el = $('<div>');
+                        _err_el.addClass("alert alert-danger err-msg").text(resp.msg);
+                        $('[name="password"]').after(_err_el); // Append error message
+                        end_loader(); // End loading indicator
+                    } else {
+                        console.log(resp);
+                        alert_toast("An error occurred", 'error');
+                        end_loader(); // End loading indicator
                     }
                 }
-            })
-        })
-       
-    })
+            });
+        });
+    });
 </script>

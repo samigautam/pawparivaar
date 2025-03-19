@@ -15,29 +15,33 @@
                   </div>
                 </form>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
-                        <li class="nav-item"><a class="nav-link" aria-current="page" href="./">Home</a></li>
-                        <?php 
-                        $cat_qry = $conn->query("SELECT * FROM categories where status = 1 ");
-                        while($crow = $cat_qry->fetch_assoc()):
-                          $sub_qry = $conn->query("SELECT * FROM sub_categories where status = 1 and parent_id = '{$crow['id']}' ");
-                          if($sub_qry->num_rows <= 0):
-                        ?>
-                        <li class="nav-item"><a class="nav-link" aria-current="page" href="./?p=products&c=<?php echo md5($crow['id']) ?>"><?php echo $crow['category'] ?></a></li>
-                        
-                        <?php else: ?>
-                        <li class="nav-item dropdown">
-                          <a class="nav-link dropdown-toggle" id="navbarDropdown<?php echo $crow['id'] ?>" href="#" role="button" data-toggle="dropdown" aria-expanded="false"><?php echo $crow['category'] ?></a></a>
-                            <ul class="dropdown-menu  p-0" aria-labelledby="navbarDropdown<?php echo $crow['id'] ?>">
-                              <?php while($srow = $sub_qry->fetch_assoc()): ?>
-                                <li><a class="dropdown-item border-bottom" href="./?p=products&c=<?php echo md5($crow['id']) ?>&s=<?php echo md5($srow['id']) ?>"><?php echo $srow['sub_category'] ?></a></li>
-                            <?php endwhile; ?>
-                            </ul>
-                        </li>
-                        <?php endif; ?>
-                        <?php endwhile; ?>
-                        <li class="nav-item"><a class="nav-link" href="./?p=about">About</a></li>
-                    </ul>
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
+    <li class="nav-item"><a class="nav-link" aria-current="page" href="./">Home</a></li>
+    <?php 
+    $cat_qry = $conn->query("SELECT * FROM categories where status = 1 ");
+    while($crow = $cat_qry->fetch_assoc()):
+        $sub_qry = $conn->query("SELECT * FROM sub_categories where status = 1 and parent_id = '{$crow['id']}' ");
+        if($sub_qry->num_rows <= 0):
+    ?>
+    <li class="nav-item"><a class="nav-link" aria-current="page" href="./?p=products&c=<?php echo md5($crow['id']) ?>"><?php echo $crow['category'] ?></a></li>
+
+    <?php else: ?>
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown<?php echo $crow['id'] ?>" href="#" role="button" data-toggle="dropdown" aria-expanded="false"><?php echo $crow['category'] ?></a>
+        <ul class="dropdown-menu p-0" aria-labelledby="navbarDropdown<?php echo $crow['id'] ?>">
+            <?php while($srow = $sub_qry->fetch_assoc()): ?>
+            <li><a class="dropdown-item border-bottom" href="./?p=products&c=<?php echo md5($crow['id']) ?>&s=<?php echo md5($srow['id']) ?>"><?php echo $srow['sub_category'] ?></a></li>
+            <?php endwhile; ?>
+        </ul>
+    </li>
+    <?php endif; ?>
+    <?php endwhile; ?>
+    
+    <li class="nav-item"><a class="nav-link" href="./?p=about">About</a></li>
+    <li class="nav-item"><a class="nav-link" href="http://localhost/pawparivaar/ovas">VET Appointment</a></li>
+    <li class="nav-item"><a class="nav-link" href="http://localhost/pawparivaar/map/index.html">Rescue</a></li>
+</ul>
+
                     <div class="d-flex align-items-center">
                       <?php if(!isset($_SESSION['userdata']['id'])): ?>
                         <button class="btn btn-outline-dark ml-2" id="login-btn" type="button">Login</button>

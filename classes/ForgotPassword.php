@@ -36,7 +36,7 @@ class ForgotPassword extends DBConnection {
             $mail->Host       = 'smtp.gmail.com';                     
             $mail->SMTPAuth   = true;                                   
             $mail->Username   = 'samigautam20@gmail.com';      // Email address from which email will be sent.                
-            $mail->Password   = 'pactlfapulateslk';    // App password used from gmail. (search if don't know about the gmail app password)                           
+            $mail->Password   = 'rlxdxhagkvgghjkb';    // App password used from gmail. (search if don't know about the gmail app password)                           
             $mail->SMTPSecure = 'tls';                          
             $mail->Port       = 587;                                    
 
@@ -50,7 +50,7 @@ class ForgotPassword extends DBConnection {
                              'You have requested to reset your password. Please click the link below to reset your password:<br>' .
                              '<a href="' . base_url . '?p=reset-password&email=' . urlencode($email) . '&token=' . urlencode($token) . '">Reset Password</a><br><br>' .
                              'If you did not request this, please ignore this email.<br><br>' .
-                             'Regards,<br>Sano Sansaar Team';
+                             'Regards,<br>Paw Parivaar Team';
         
             if ($mail->send()){
                 return true;

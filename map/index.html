@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Rescue Operation</title>
+    
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="main">
+        <div class="container">
+            <div class="map-container">
+                <input type="text" id="searchBox" placeholder="Enter location">
+                <button onclick="searchLocation()">Search</button>
+                <div>
+                    <input type="text" id="startLocation" placeholder="Start location">
+                    <input type="text" id="destinationLocation" placeholder="Destination">
+                    <button onclick="calculateRoute()">Get Directions</button>
+                </div>
+                <div class="map" id="map"></div>
+            </div>
+            <div class="marked-container">
+                <h1>Rescue Area</h1>
+                <hr>
+                <button onclick="closeMarkerContainer()">&#10062;</button>
+                <div class="marker">
+                    <div class="input-group">
+                        <h3>Marker Name:</h3>
+                        <input id="markerName" type="text">
+                    </div>
+                    <button id="saveMarker" onclick="saveMarker()">Save Marker</button>
+                </div>
+                <hr>
+                <div class="marked">
+                    <h2>Marked Locations</h2>
+                    <ul id="markedLocations"></ul>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Leaflet.js JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <script src="./script.js"></script>
+</body>
+</html>

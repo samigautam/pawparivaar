@@ -2,8 +2,8 @@
  <header class="bg-dark py-5" id="main-header">
     <div class="container px-4 px-lg-5 my-5">
         <div class="text-center text-white">
-            <h1 class="display-4 fw-bolder">Your Pets Deserve The Best</h1>
-            <p class="lead fw-normal text-white-50 mb-0">Looking for your pet's needs? Shop Now!</p>
+            <h1 class="display-4 fw-bolder">Every Animal Rescued, Every Pet Loved</h1>
+            <p class="lead fw-normal text-white-50 mb-0">Looking to rescue or care for your furry friends? Start Here!</p>
         </div>
     </div>
 </header>

@@ -30,7 +30,7 @@ $total = 0;
                         <h4 class="text-muted">Payment Method</h4>
                             <div class="d-flex w-100 justify-content-between">
                                 <button class="btn btn-flat btn-dark">Cash on Delivery</button>
-                                
+                                <span id="paypal-button"></span>
                             </div>
                         </div>
                     </div>

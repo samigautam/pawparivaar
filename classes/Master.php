@@ -1,5 +1,9 @@
 <?php
-require_once('../config.php');
+require_once(__DIR__ . '/../config.php');
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\SMTP;
 Class Master extends DBConnection {
 	private $settings;
 	public function __construct(){
@@ -258,7 +262,7 @@ Class Master extends DBConnection {
 		return json_encode($resp);
 
 	}
-	function register(){
+	function register() {
 		// Validation checks
 		$validation_errors = $this->validate($_POST);
 		if (!empty($validation_errors)) {
@@ -269,47 +273,56 @@ Class Master extends DBConnection {
 		extract($_POST);
 		$data = "";
 		$_POST['password'] = md5($_POST['password']);
-		foreach($_POST as $k =>$v){
-			if(!in_array($k,array('id'))){
-				if(!empty($data)) $data .=",";
+		foreach ($_POST as $k => $v) {
+			if (!in_array($k, array('id'))) {
+				if (!empty($data)) $data .= ",";
 				$data .= " `{$k}`='{$v}' ";
 			}
 		}
-		$check = $this->conn->query("SELECT * FROM `clients` where `email` = '{$email}' ".(!empty($id) ? " and id != {$id} " : "")." ")->num_rows;
-		if($this->capture_err())
+		$check = $this->conn->query("SELECT * FROM `clients` WHERE `email` = '{$email}' " . (!empty($id) ? " AND id != {$id} " : "") . " ")->num_rows;
+		if ($this->capture_err())
 			return $this->capture_err();
-		if($check > 0){
+		if ($check > 0) {
 			$resp['status'] = 'failed';
 			$resp['msg'] = "Email already taken.";
 			return json_encode($resp);
 			exit;
 		}
-		if(empty($id)){
-			$sql = "INSERT INTO `clients` set {$data} ";
+		
+		// Check if email is verified before allowing registration
+		$email_verification = $this->conn->query("SELECT * FROM email_verifications WHERE email = '{$email}' AND is_verified = 1");
+		if ($email_verification->num_rows === 0) {
+			$resp['status'] = 'failed';
+			$resp['msg'] = "Please verify your email before registering.";
+			return json_encode($resp);
+		}
+	
+		if (empty($id)) {
+			$sql = "INSERT INTO `clients` SET {$data} ";
 			$save = $this->conn->query($sql);
 			$id = $this->conn->insert_id;
-		}else{
-			$sql = "UPDATE `clients` set {$data} where id = '{$id}' ";
+		} else {
+			$sql = "UPDATE `clients` SET {$data} WHERE id = '{$id}' ";
 			$save = $this->conn->query($sql);
 		}
-		if($save){
+		if ($save) {
 			$resp['status'] = 'success';
-			if(empty($id))
-				$this->settings->set_flashdata('success',"Account successfully created.");
+			if (empty($id))
+				$this->settings->set_flashdata('success', "Account successfully created.");
 			else
-				$this->settings->set_flashdata('success',"Account successfully updated.");
-			foreach($_POST as $k =>$v){
-					$this->settings->set_userdata($k,$v);
+				$this->settings->set_flashdata('success', "Account successfully updated.");
+			foreach ($_POST as $k => $v) {
+				$this->settings->set_userdata($k, $v);
 			}
-			$this->settings->set_userdata('id',$id);
-
-		}else{
+			$this->settings->set_userdata('id', $id);
+	
+		} else {
 			$resp['status'] = 'failed';
-			$resp['err'] = $this->conn->error."[{$sql}]";
+			$resp['err'] = $this->conn->error . "[{$sql}]";
 		}
 		return json_encode($resp);
 	}
-
+	
 	function validate($data) {
 		$validation_errors = []; // Renamed variable
 		
