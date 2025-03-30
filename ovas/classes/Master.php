@@ -70,7 +70,7 @@ Class Master extends DBConnection {
 		return json_encode($resp);
 
 	}
-	function save_category(){
+	function save_vcategory(){
 		extract($_POST);
 		$data = "";
 		foreach($_POST as $k =>$v){
@@ -109,7 +109,7 @@ Class Master extends DBConnection {
 			$this->settings->set_flashdata('success',$resp['msg']);
 		return json_encode($resp);
 	}
-	function delete_category(){
+	function delete_vcategory(){
 		extract($_POST);
 		$del = $this->conn->query("UPDATE `category_list` set delete_flag=1 where id = '{$id}'");
 		if($del){
@@ -277,11 +277,11 @@ switch ($action) {
 	case 'delete_message':
 		echo $Master->delete_message();
 	break;
-	case 'save_category':
-		echo $Master->save_category();
+	case 'save_vcategory':
+		echo $Master->save_vcategory();
 	break;
-	case 'delete_category':
-		echo $Master->delete_category();
+	case 'delete_vcategory':
+		echo $Master->delete_vcategory();
 	break;
 	case 'save_service':
 		echo $Master->save_service();

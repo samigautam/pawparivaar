@@ -8,6 +8,7 @@ var markers = [];
 var control = null;
 var currentMarker = null; // This will hold the current marker being added
 var isDestinationSelected = false; // To track if the destination has been set
+var currentLocation = null; // Store location coordinates for rescue form
 
 // Search for a location (address or street name)
 function searchLocation() {
@@ -21,6 +22,13 @@ function searchLocation() {
                 map.setView([lat, lon], 15);
                 currentMarker = L.marker([lat, lon]).addTo(map);
                 currentMarker.bindPopup(`You can add a name for this marker.`).openPopup();
+                
+                // Store current location
+                currentLocation = {
+                    lat: lat,
+                    lon: lon,
+                    display_name: data[0].display_name
+                };
 
                 // Enable the "Save Marker" button after search result
                 document.getElementById('saveMarker').disabled = false;
@@ -75,6 +83,13 @@ function calculateRoute() {
                     L.marker(startCoords).addTo(map).bindPopup("Start Location").openPopup();
                     L.marker(endCoords).addTo(map).bindPopup("Destination Location").openPopup();
 
+                    // Store destination location
+                    currentLocation = {
+                        lat: endCoords[0],
+                        lon: endCoords[1],
+                        display_name: end
+                    };
+
                     // Enable saving of the destination marker
                     isDestinationSelected = true;
                     document.getElementById('saveMarker').disabled = false;
@@ -90,6 +105,13 @@ map.on('click', function(e) {
     // Place a marker on the clicked location
     currentMarker = L.marker(e.latlng).addTo(map);
     currentMarker.bindPopup(`You can add a name for this marker.`).openPopup();
+    
+    // Store current location
+    currentLocation = {
+        lat: e.latlng.lat,
+        lon: e.latlng.lng,
+        display_name: "Selected point"
+    };
 
     // Enable the "Save Marker" button
     document.getElementById('saveMarker').disabled = false;
@@ -106,7 +128,16 @@ function saveMarker() {
 
     if (currentMarker) {
         currentMarker.bindPopup(markerName).openPopup();
-        markers.push({ name: markerName, coords: [currentMarker.getLatLng().lat, currentMarker.getLatLng().lng], marker: currentMarker });
+        markers.push({ 
+            name: markerName, 
+            coords: [currentMarker.getLatLng().lat, currentMarker.getLatLng().lng], 
+            marker: currentMarker 
+        });
+
+        // Store the location name
+        if (currentLocation) {
+            currentLocation.name = markerName;
+        }
 
         // Add to the marked locations list
         var listItem = document.createElement('li');
@@ -115,6 +146,7 @@ function saveMarker() {
                 <span>${markerName}</span>
                 <button onclick="removeMarker(${markers.length - 1})">Remove</button>
                 <button onclick="seeMarker(${markers.length - 1})">See</button>
+                <button onclick="initiateRescue(${markers.length - 1})">Rescue</button>
             </div>
         `;
         document.getElementById('markedLocations').appendChild(listItem);
@@ -122,7 +154,48 @@ function saveMarker() {
         // Disable the "Save Marker" button and reset marker input field
         document.getElementById('saveMarker').disabled = true;
         document.getElementById('markerName').value = "";
+        
+        // Show rescue option
+        showRescueOption(markerName, currentMarker.getLatLng().lat, currentMarker.getLatLng().lng);
     }
+}
+
+// Show rescue option modal
+function showRescueOption(locationName, lat, lng) {
+    // Create modal for rescue option
+    const modal = document.createElement('div');
+    modal.classList.add('rescue-modal');
+    modal.innerHTML = `
+        <div class="rescue-modal-content">
+            <h3>Apply for a Rescue Operation?</h3>
+            <p>Would you like to request a rescue operation at ${locationName}?</p>
+            <div class="rescue-buttons">
+                <button onclick="redirectToRescueForm('${locationName}', ${lat}, ${lng})">Yes</button>
+                <button onclick="closeRescueModal()">No</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Close the rescue modal
+function closeRescueModal() {
+    const modal = document.querySelector('.rescue-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+// Redirect to the rescue form with location information
+function redirectToRescueForm(locationName, lat, lng) {
+    // Redirect to rescue form with location parameters
+    window.location.href = `rescue-form.php?location=${encodeURIComponent(locationName)}&lat=${lat}&lng=${lng}`;
+}
+
+// Initiate rescue from the marked locations list
+function initiateRescue(index) {
+    var marker = markers[index];
+    redirectToRescueForm(marker.name, marker.coords[0], marker.coords[1]);
 }
 
 // Remove a marker
@@ -141,6 +214,7 @@ function seeMarker(index) {
     map.setView(marker.coords, 15); // Center the map to this marker's location
     marker.marker.openPopup(); // Open the marker's popup
 }
+
 // Close the marker container and redirect
 function closeMarkerContainer() {
     document.querySelector('.marked-container').style.display = 'none';

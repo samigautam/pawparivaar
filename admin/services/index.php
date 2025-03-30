@@ -8,9 +8,9 @@
 </style>
 <div class="card card-outline card-primary rounded-0 shadow">
 	<div class="card-header">
-		<h3 class="card-title">List of Category <small><em>(Pet Types)</em></small></h3>
+		<h3 class="card-title">List of Services</h3>
 		<div class="card-tools">
-			<a href="javascript:void(0)" id="create_new" class="btn btn-flat btn-sm btn-primary"><span class="fas fa-plus"></span>  Add New</a>
+			<a href="javascript:void(0)" id="create_new" class="btn btn-flat btn-sm btn-primary"><span class="fas fa-plus"></span>  Add New Service</a>
 		</div>
 	</div>
 	<div class="card-body">
@@ -20,33 +20,50 @@
 				<colgroup>
 					<col width="5%">
 					<col width="20%">
-					<col width="60%">
+					<col width="25%">
+					<col width="25%">
+					<col width="10%">
 					<col width="15%">
 				</colgroup>
 				<thead>
 					<tr>
 						<th>#</th>
 						<th>Date Created</th>
-						<th>Name</th>
+						<th>Service</th>
+						<th>For</th>
+						<th>Cost</th>
 						<th>Action</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php 
 						$i = 1;
-						$qry = $conn->query("SELECT * from `category_list` where delete_flag = 0 order by `name` asc ");
+						$categories = $conn->query("SELECT * FROM `category_list`");
+						$cat_arr = array_column($categories->fetch_all(MYSQLI_ASSOC),'name','id');
+						$qry = $conn->query("SELECT * from `service_list` where delete_flag = 0 order by `name` asc ");
 						while($row = $qry->fetch_assoc()):
+							$for = '';
+							foreach(explode(',',$row['category_ids']) as $v){
+								if(isset($cat_arr[$v])){
+									if(!empty($for)) $for .= ", ";
+									$for.= $cat_arr[$v];
+								}
+							}
 					?>
 						<tr>
 							<td class="text-center"><?php echo $i++; ?></td>
 							<td class=""><?php echo date("Y-m-d H:i",strtotime($row['date_created'])) ?></td>
-							<td class="truncate-1"><?php echo $row['name'] ?></td>
+							<td><?php echo ucwords($row['name']) ?></td>
+							<td class=""><?php echo $for ?></td>
+							<td class="text-right"><?php echo number_format($row['fee'],2) ?></td>
 							<td align="center">
 								 <button type="button" class="btn btn-flat btn-default btn-sm dropdown-toggle dropdown-icon" data-toggle="dropdown">
 				                  		Action
 				                    <span class="sr-only">Toggle Dropdown</span>
 				                  </button>
 				                  <div class="dropdown-menu" role="menu">
+				                    <a class="dropdown-item view_data" href="javascript:void(0)" data-id ="<?php echo $row['id'] ?>"><span class="fa fa-eye text-dark"></span> View</a>
+				                    <div class="dropdown-divider"></div>
 				                    <a class="dropdown-item edit_data" href="javascript:void(0)" data-id ="<?php echo $row['id'] ?>"><span class="fa fa-edit text-primary"></span> Edit</a>
 				                    <div class="dropdown-divider"></div>
 				                    <a class="dropdown-item delete_data" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>"><span class="fa fa-trash text-danger"></span> Delete</a>
@@ -63,28 +80,28 @@
 <script>
 	$(document).ready(function(){
         $('#create_new').click(function(){
-			uni_modal("Add New Category","categories/manage_vcategory.php")
+			uni_modal("Add New Service","services/manage_service.php",'mid-large')
 		})
         $('.edit_data').click(function(){
-			uni_modal("Update Category Details","categories/manage_vcategory.php?id="+$(this).attr('data-id'))
+			uni_modal("Update Service Details","services/manage_service.php?id="+$(this).attr('data-id'),'mid-large')
 		})
 		$('.delete_data').click(function(){
-			_conf("Are you sure to delete this Category permanently?","delete_vcategory",[$(this).attr('data-id')])
+			_conf("Are you sure to delete this Service permanently?","delete_service",[$(this).attr('data-id')])
 		})
 		$('.view_data').click(function(){
-			uni_modal("Category Details","categories/view_category.php?id="+$(this).attr('data-id'))
+			uni_modal("Service Details","services/view_service.php?id="+$(this).attr('data-id'),'mid-large')
 		})
 		$('.table td, .table th').addClass('py-1 px-2 align-middle')
 		$('.table').dataTable({
             columnDefs: [
-                { orderable: false, targets: 3 }
+                { orderable: false, targets: 4 }
             ],
         });
 	})
-	function delete_vcategory($id){
+	function delete_service($id){
 		start_loader();
 		$.ajax({
-			url:_base_url_+"classes/Master.php?f=delete_vcategory",
+			url:_base_url_+"classes/Master.php?f=delete_service",
 			method:"POST",
 			data:{id: $id},
 			dataType:"json",

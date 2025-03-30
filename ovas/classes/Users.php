@@ -14,6 +14,7 @@ Class Users extends DBConnection {
 		if(!isset($_POST['status']) && $this->settings->userdata('login_type') == 1){
 			$_POST['status'] = 1;
 		}
+		
 		extract($_POST);
 		$oid = $id;
 		$data = '';

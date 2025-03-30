@@ -53,7 +53,7 @@
                       <a href="<?php echo base_url ?>admin/?page=categories" class="nav-link nav-categories">
                         <i class="nav-icon fas fa-table"></i>
                         <p>
-                          Category List
+                          Animal Category List
                         </p>
                       </a>
                     </li>

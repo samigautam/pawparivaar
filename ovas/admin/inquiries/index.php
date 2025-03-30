@@ -38,6 +38,7 @@
 						$i = 1;
 						$qry = $conn->query("SELECT * from `message_list`  order by status asc, unix_timestamp(date_created) desc ");
 						while($row = $qry->fetch_assoc()):
+			
 					?>
 						<tr>
 							<td class="text-center"><?php echo $i++; ?></td>

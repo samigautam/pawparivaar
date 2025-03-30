@@ -1,9 +1,3 @@
-<?php if($_settings->chk_flashdata('success')): ?>
-<script>
-	alert_toast("<?php echo $_settings->flashdata('success') ?>",'success')
-</script>
-<?php endif;?>
-
 <style>
     .img-avatar{
         width:45px;
@@ -13,60 +7,58 @@
         border-radius:100%;
     }
 </style>
-<div class="card card-outline card-primary">
+<div class="card card-outline card-info rounded-0">
 	<div class="card-header">
-		<h3 class="card-title">List of System Users</h3>
-		<div class="card-tools">
-			<a href="?page=user/manage_user" class="btn btn-flat btn-primary"><span class="fas fa-plus"></span>  Create New</a>
-		</div>
+		<h3 class="card-title">List of Inquiries</h3>
 	</div>
 	<div class="card-body">
 		<div class="container-fluid">
         <div class="container-fluid">
 			<table class="table table-hover table-striped">
-				<!-- <colgroup>
+				<colgroup>
 					<col width="5%">
-					<col width="10%">
 					<col width="20%">
 					<col width="20%">
-					<col width="15%">
+					<col width="30%">
 					<col width="15%">
 					<col width="10%">
-				</colgroup> -->
+				</colgroup>
 				<thead>
 					<tr>
 						<th>#</th>
-						<th>Avatar</th>
-						<th>Name</th>
-						<th>Username</th>
-						<th>User Type</th>
+						<th>Inquirer</th>
+						<th>Email</th>
+						<th>Message</th>
+						<th>Status</th>
 						<th>Action</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php 
 						$i = 1;
-						$qry = $conn->query("SELECT *,concat(firstname,' ',lastname) as name from `users` where id != '1' order by concat(firstname,' ',lastname) asc ");
+						$qry = $conn->query("SELECT * from `message_list`  order by status asc, unix_timestamp(date_created) desc ");
 						while($row = $qry->fetch_assoc()):
 					?>
 						<tr>
 							<td class="text-center"><?php echo $i++; ?></td>
-							<td class="text-center"><img src="<?php echo validate_image($row['avatar']) ?>" class="img-avatar img-thumbnail p-0 border-2" alt="user_avatar"></td>
-							<td><?php echo ucwords($row['name']) ?></td>
-							<td ><p class="m-0 truncate-1"><?php echo $row['username'] ?></p></td>
-							<td ><p class="m-0"><?php echo ($row['type'] == 1 )? "Adminstrator" : "Staff" ?></p></td>
+							<td><?php echo ucwords($row['fullname']) ?></td>
+							<td><?php echo ($row['email']) ?></td>
+							<td class="truncate-1"><?php echo ($row['message']) ?></td>
+							<td class="text-center">
+								<?php if($row['status'] == 1): ?>
+									<span class="badge badge-pill badge-success">Read</span>
+								<?php else: ?>
+								<span class="badge badge-pill badge-primary">Unread</span>
+								<?php endif; ?>
+							</td>
 							<td align="center">
 								 <button type="button" class="btn btn-flat btn-default btn-sm dropdown-toggle dropdown-icon" data-toggle="dropdown">
 				                  		Action
 				                    <span class="sr-only">Toggle Dropdown</span>
 				                  </button>
 				                  <div class="dropdown-menu" role="menu">
-				                    <a class="dropdown-item" href="?page=user/manage_user&id=<?php echo $row['id'] ?>"><span class="fa fa-edit text-primary"></span> Edit</a>
+				                    <a class="dropdown-item view_details" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>"><span class="fa fa-eye text-dark"></span> View</a>
 				                    <div class="dropdown-divider"></div>
-									<?php if($row['status'] != 1): ?>
-				                    <a class="dropdown-item verify_user" href="javascript:void(0)" data-id="<?= $row['id'] ?>"  data-name="<?= $row['username'] ?>"><span class="fa fa-check text-primary"></span> Verify</a>
-				                    <div class="dropdown-divider"></div>
-									<?php endif; ?>
 				                    <a class="dropdown-item delete_data" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>"><span class="fa fa-trash text-danger"></span> Delete</a>
 				                  </div>
 							</td>
@@ -81,18 +73,21 @@
 <script>
 	$(document).ready(function(){
 		$('.delete_data').click(function(){
-			_conf("Are you sure to delete this User permanently?","delete_user",[$(this).attr('data-id')])
+			_conf("Are you sure to delete this Inquiry permanently?","delete_message",[$(this).attr('data-id')])
 		})
 		$('.table td,.table th').addClass('py-1 px-2 align-middle')
+		$('.view_details').click(function(){
+			uni_modal('Inquiry Details',"inquiries/view_details.php?id="+$(this).attr('data-id'),'mid-large')
+		})
 		$('.table').dataTable();
-		$('.verify_user').click(function(){
-			_conf("Are you sure to verify <b>"+$(this).attr('data-name')+"<b/>?","verify_user",[$(this).attr('data-id')])
+		$('#uni_modal').on('hide.bs.modal',function(){
+			location.reload()
 		})
 	})
-	function delete_user($id){
+	function delete_message($id){
 		start_loader();
 		$.ajax({
-			url:_base_url_+"classes/Users.php?f=delete",
+			url:_base_url_+"classes/Master.php?f=delete_message",
 			method:"POST",
 			data:{id: $id},
 			dataType:"json",
@@ -114,7 +109,7 @@
 	function verify_user($id){
 		start_loader();
 		$.ajax({
-			url:_base_url_+"classes/Users.php?f=verify_user",
+			url:_base_url_+"classes/Users.php?f=verify_inquiries",
 			method:"POST",
 			data:{id: $id},
 			dataType:"json",
