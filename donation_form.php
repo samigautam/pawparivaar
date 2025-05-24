@@ -7,8 +7,8 @@
     <script src="https://www.paypalobjects.com/api/checkout.js"></script>
     <style>
         :root {
-            --primary-color: #4caf50;
-            --secondary-color: #ff8c00;
+            --primary-color:rgb(32, 41, 32);
+            --secondary-color:rgb(44, 24, 103);
             --background-color: #f5f5f5;
             --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
@@ -131,28 +131,28 @@
         }
         
         .donate-button:hover {
-            background-color: #3d8b40;
+            background-color:rgb(30, 40, 30);
         }
         
         .pet-images {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
-        
-        .pet-image {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background-color: #e0e0e0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            font-size: 12px;
-            color: #777;
-        }
+        display: flex;
+        gap: 20px; /* Space between circles */
+        justify-content: center; /* Center the circles */
+    }
+    
+    .pet-image {
+        width: 150px; /* Adjust size as needed */
+        height: 150px; /* Must match width for perfect circle */
+        border-radius: 50%; /* Makes it circular */
+        overflow: hidden; /* Ensures image stays within circle */
+        border: 3px solid #ffb6c1; /* Optional decorative border */
+    }
+    
+    .pet-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensures image covers the circle without stretching */
+    }
         
         .impact-info {
             background-color: #f9f9f9;
@@ -189,13 +189,13 @@
             <div class="form-group">
                 <label for="donation_amount">Choose Donation Amount</label>
                 <div class="donation-options">
-                    <div class="donation-option" data-amount="25">$25</div>
-                    <div class="donation-option" data-amount="50">$50</div>
-                    <div class="donation-option" data-amount="100">$100</div>
-                    <div class="donation-option" data-amount="200">$200</div>
+                    <div class="donation-option" data-amount="25">Rs.2500</div>
+                    <div class="donation-option" data-amount="50">Rs.5000</div>
+                    <div class="donation-option" data-amount="100">Rs.10000</div>
+                    <div class="donation-option" data-amount="200">Rs.20000</div>
                 </div>
                 <div class="custom-amount">
-                    <span class="currency-symbol">$</span>
+                    <span class="currency-symbol">Rs.</span>
                     <input type="number" id="custom-amount-input" class="form-control" placeholder="Other amount" min="1" step="1">
                 </div>
             </div>
@@ -217,10 +217,10 @@
             
             <div class="impact-info">
                 <h3>Your Impact</h3>
-                <p>$25 provides vaccines for 5 animals<br>
-                $50 feeds 10 rescued pets for a week<br>
-                $100 covers medical treatment for an injured animal<br>
-                $200 helps fund a special rescue operation</p>
+                <p>Rs.2500 provides vaccines for 5 animals<br>
+                Rs.5000 feeds 10 rescued pets for a week<br>
+                Rs.10000 covers medical treatment for an injured animal<br>
+                Rs.20000 helps fund a special rescue operation</p>
             </div>
             
             <!-- PayPal buttons will be rendered here -->
@@ -235,10 +235,18 @@
         </form>
         
         <div class="pet-images">
-            <div class="pet-image">Pet Image 1</div>
-            <div class="pet-image">Pet Image 2</div>
-            <div class="pet-image">Pet Image 3</div>
-        </div>
+    <div class="pet-image">
+        <img src="uploads\download (1).jpeg" alt="Cute dog">
+    </div>
+    
+    <div class="pet-image">
+        <img src="uploads\download.jpeg" alt="Playful cat">
+    </div>
+    
+    <div class="pet-image">
+        <img src="uploads\images.jpeg" alt="Fluffy rabbit">
+    </div>
+</div>
     </div>
 
     <script>

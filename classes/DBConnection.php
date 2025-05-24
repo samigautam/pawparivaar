@@ -4,25 +4,20 @@ if(!defined('DB_SERVER')){
 }
 class DBConnection{
 
-    private $host = DB_SERVER;
-    private $username = DB_USERNAME;
-    private $password = DB_PASSWORD;
-    private $database = DB_NAME;
+    private $host = "localhost";
+    private $username = "root";  // Replace with your actual database username
+    private $password = "";      // Replace with your actual database password
+    private $db_name = "pawparivaar"; // Replace with your actual database name
     
     public $conn;
     
     public function __construct(){
 
-        if (!isset($this->conn)) {
-            
-            $this->conn = new mysqli($this->host, $this->username, $this->password, $this->database);
-            
-            if (!$this->conn) {
-                echo 'Cannot connect to database server';
-                exit;
-            }            
-        }    
+        $this->conn = new mysqli($this->host, $this->username, $this->password, $this->db_name);
         
+        if ($this->conn->connect_error) {
+            die("Connection failed: " . $this->conn->connect_error);
+        }
     }
     public function __destruct(){
         $this->conn->close();

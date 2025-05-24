@@ -14,6 +14,365 @@ Class Master extends DBConnection {
 	public function __destruct(){
 		parent::__destruct();
 	}
+	// Save Animal Function
+function save_animal(){
+    extract($_POST);
+    $data = "";
+    foreach($_POST as $k => $v){
+        if(!in_array($k, array('animal_id'))){
+            if(!empty($data)) $data .= ",";
+            if($k == 'spayed_neutered' || $k == 'vaccinations_current'){
+                // For checkboxes, set to 0 if not checked
+                $v = isset($v) ? 1 : 0;
+            }
+            $v = addslashes(trim($v));
+            $data .= " `{$k}`='{$v}' ";
+        }
+    }
+    
+    // Handle file upload
+    if(!empty($_FILES['primary_image']['tmp_name'])){
+        $upload_path = '../uploads/animals/';
+        if(!is_dir(base_app.$upload_path)){
+            mkdir(base_app.$upload_path, 0777, true);
+        }
+        $fname = $upload_path.strtotime(date('y-m-d H:i')).'_'.$_FILES['primary_image']['name'];
+        $move = move_uploaded_file($_FILES['primary_image']['tmp_name'],base_app.$fname);
+        if($move){
+            $data .= ", `primary_image` = '{$fname}' ";
+        }
+    }
+    
+    // Add timestamps
+    $date_now = date("Y-m-d H:i:s");
+    if(empty($animal_id)){
+        $data .= ", `created_at` = '{$date_now}' ";
+    }
+    $data .= ", `updated_at` = '{$date_now}' ";
+    
+    // Insert or update record
+    if(empty($animal_id)){
+        $sql = "INSERT INTO `animals` SET {$data}";
+    }else{
+        $sql = "UPDATE `animals` SET {$data} WHERE animal_id = '{$animal_id}'";
+    }
+    
+    $save = $this->conn->query($sql);
+    if($save){
+        $aid = !empty($animal_id) ? $animal_id : $this->conn->insert_id;
+        $resp['status'] = 'success';
+        $resp['aid'] = $aid;
+        if(empty($animal_id))
+            $this->settings->set_flashdata('success',"Animal record successfully added.");
+        else
+            $this->settings->set_flashdata('success',"Animal record successfully updated.");
+    }else{
+        $resp['status'] = 'failed';
+        $resp['err'] = $this->conn->error."[{$sql}]";
+    }
+    return json_encode($resp);
+}
+
+// Delete Animal Function
+function delete_animal(){
+    extract($_POST);
+    $del = $this->conn->query("DELETE FROM `animals` WHERE animal_id = '{$id}'");
+    if($del){
+        $resp['status'] = 'success';
+        $this->settings->set_flashdata('success',"Animal record successfully deleted.");
+    }else{
+        $resp['status'] = 'failed';
+        $resp['error'] = $this->conn->error;
+    }
+    return json_encode($resp);
+}
+
+function update_application_status(){
+    extract($_POST);
+    
+    // Debug received data
+    error_log("Received POST data: " . json_encode($_POST));
+    
+    $data = "";
+    // Check if required fields are present
+    if(!isset($application_id) || !isset($previous_status) || !isset($new_status)) {
+        $resp['status'] = 'failed';
+        $resp['msg'] = "Missing required fields";
+        return json_encode($resp);
+    }
+    
+    // Handle any potential empty values for home_visit fields
+    if(!isset($home_visit_date) || empty($home_visit_date)) {
+        $home_visit_date = null;
+    }
+    if(!isset($home_visit_notes)) {
+        $home_visit_notes = '';
+    }
+    $home_visit_passed = isset($home_visit_passed) ? 1 : 0;
+    
+    try {
+        // Start transaction
+        $this->conn->begin_transaction();
+        
+        // Update application status
+        $stmt = $this->conn->prepare("UPDATE `adoption_applications` SET 
+                                    `status`= ?, 
+                                    `staff_notes`= ?,
+                                    `home_visit_date`= ?,
+                                    `home_visit_notes`= ?,
+                                    `home_visit_passed`= ?,
+                                    `last_updated`= NOW()
+                                WHERE application_id = ?");
+        
+        $stmt->bind_param("ssssii", $new_status, $notes, $home_visit_date, $home_visit_notes, $home_visit_passed, $application_id);
+        $stmt->execute();
+        
+        if($stmt->affected_rows > 0 || $new_status != $previous_status) {
+            // Log the status change
+            $changed_by = isset($this->settings->userdata['username']) ? $this->settings->userdata['username'] : 'Admin';
+            $log_stmt = $this->conn->prepare("INSERT INTO `application_status_log` 
+                                           (`application_id`, `previous_status`, `new_status`, `changed_at`, `changed_by`, `notes`) 
+                                           VALUES (?, ?, ?, NOW(), ?, ?)");
+            $log_stmt->bind_param("issss", $application_id, $previous_status, $new_status, $changed_by, $notes);
+            $log_stmt->execute();
+            
+            // If approved or completed, update animal status
+            if($new_status == 'Approved' || $new_status == 'Completed'){
+                // Update animal status to Pending or Adopted
+                $animal_status = ($new_status == 'Approved') ? 'Pending' : 'Adopted';
+                $animal_stmt = $this->conn->prepare("UPDATE `animals` SET `adoption_status` = ? WHERE `animal_id` = ?");
+                $animal_stmt->bind_param("si", $animal_status, $animal_id);
+                $animal_stmt->execute();
+            }
+            
+            $this->conn->commit();
+            $resp['status'] = 'success';
+            $this->settings->set_flashdata('success', "Application status successfully updated to {$new_status}.");
+        } else {
+            $this->conn->rollback();
+            $resp['status'] = 'failed';
+            $resp['msg'] = "No changes were made to the application status.";
+        }
+    } catch (Exception $e) {
+        $this->conn->rollback();
+        $resp['status'] = 'failed';
+        $resp['msg'] = "Database error: " . $e->getMessage();
+        error_log("Error in update_application_status: " . $e->getMessage());
+    }
+    
+    return json_encode($resp);
+}
+// Function to update rescue operation status
+function update_rescue_status(){
+    extract($_POST);
+    
+    // Debug output to check received data
+    error_log("Updating rescue status with data: " . json_encode($_POST));
+    
+    // Data validation
+    if(!isset($rescue_id) || !isset($new_status) || !isset($previous_status)) {
+        $resp['status'] = 'failed';
+        $resp['msg'] = "Missing required fields";
+        error_log("Missing required fields in update_rescue_status");
+        return json_encode($resp);
+    }
+    
+    try {
+        // Start transaction
+        $this->conn->begin_transaction();
+        
+        // Build update SQL based on available columns in rescue_operations table
+        $sql = "UPDATE `rescue_operations` SET 
+                `status` = ?,
+                `updated_at` = NOW()";
+        
+        // Add parameters for the statement
+        $params = [$new_status];
+        $types = "s"; // string
+        
+        // If additional details were submitted, update that field too
+        if(isset($notes) && !empty($notes)) {
+            $sql .= ", `additional_details` = ?";
+            $params[] = $notes;
+            $types .= "s"; // string
+        }
+        
+        // Complete the SQL statement
+        $sql .= " WHERE id = ?";
+        $params[] = intval($rescue_id);
+        $types .= "i"; // integer
+        
+        // Prepare and execute the statement
+        $stmt = $this->conn->prepare($sql);
+        if(!$stmt) {
+            throw new Exception("SQL preparation failed: " . $this->conn->error);
+        }
+        
+        // Bind parameters dynamically
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        
+        if($stmt->affected_rows > 0 || $new_status != $previous_status) {
+            // Get rescue operation details
+            $rescue_details = $this->conn->query("SELECT r.*, c.email, c.id as client_id FROM rescue_operations r INNER JOIN clients c ON r.email = c.email WHERE r.id = '{$rescue_id}'")->fetch_assoc();
+            
+            // Map status to notification messages
+            $status_notifications = array(
+                'Pending' => array(
+                    'title' => 'Rescue Request Received',
+                    'message' => "Your rescue request for {$rescue_details['animal_type']} has been received and is pending review. Our team will contact you shortly."
+                ),
+                'Under Review' => array(
+                    'title' => 'Rescue Request Under Review',
+                    'message' => "Your rescue request for {$rescue_details['animal_type']} is currently being reviewed by our team. We'll update you soon."
+                ),
+                'Team Dispatched' => array(
+                    'title' => 'Rescue Team Dispatched',
+                    'message' => "Our rescue team has been dispatched to your location for the {$rescue_details['animal_type']}. They will arrive shortly."
+                ),
+                'In Progress' => array(
+                    'title' => 'Rescue Operation In Progress',
+                    'message' => "The rescue operation for {$rescue_details['animal_type']} is currently in progress. Our team is working on the rescue."
+                ),
+                'Completed' => array(
+                    'title' => 'Rescue Operation Completed',
+                    'message' => "The rescue operation for {$rescue_details['animal_type']} has been completed successfully. Thank you for your concern and support."
+                ),
+                'On Hold' => array(
+                    'title' => 'Rescue Operation On Hold',
+                    'message' => "The rescue operation for {$rescue_details['animal_type']} has been put on hold. " . (isset($notes) ? "Reason: {$notes}" : "")
+                ),
+                'Cancelled' => array(
+                    'title' => 'Rescue Operation Cancelled',
+                    'message' => "The rescue operation for {$rescue_details['animal_type']} has been cancelled. " . (isset($notes) ? "Reason: {$notes}" : "")
+                )
+            );
+            
+            // Send notification if status has a corresponding message
+            if(isset($status_notifications[$new_status])) {
+                $notification = $status_notifications[$new_status];
+                $notif_sql = "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'rescue_status')";
+                $notif_stmt = $this->conn->prepare($notif_sql);
+                $notif_stmt->bind_param("iss", $rescue_details['client_id'], $notification['title'], $notification['message']);
+                $notif_stmt->execute();
+            }
+            
+            // Log the status change
+            $log_sql = "INSERT INTO `rescue_status_log` 
+                       (`rescue_id`, `previous_status`, `new_status`, `notes`, `changed_by`, `changed_at`) 
+                       VALUES (?, ?, ?, ?, ?, NOW())";
+            
+            // Get the username for the log
+            $username = '';
+            if(isset($_SESSION['userdata']) && isset($_SESSION['userdata']['username'])) {
+                $username = $_SESSION['userdata']['username'];
+            } else {
+                $username = 'Admin';
+            }
+            
+            $log_stmt = $this->conn->prepare($log_sql);
+            $log_stmt->bind_param("issss", $rescue_id, $previous_status, $new_status, $notes, $username);
+            $log_stmt->execute();
+            
+            $this->conn->commit();
+            $resp['status'] = 'success';
+            $this->settings->set_flashdata('success', "Rescue status updated successfully to {$new_status}.");
+        } else {
+            $this->conn->rollback();
+            $resp['status'] = 'failed';
+            $resp['msg'] = "No changes were made to the rescue status.";
+        }
+    } catch (Exception $e) {
+        $this->conn->rollback();
+        $resp['status'] = 'failed';
+        $resp['msg'] = "Database error: " . $e->getMessage();
+        error_log("Error in update_rescue_status: " . $e->getMessage());
+    }
+    
+    return json_encode($resp);
+}
+
+// Function to delete rescue operation
+function delete_rescue(){
+    extract($_POST);
+    
+    $delete = $this->conn->query("DELETE FROM `rescue_operations` WHERE id = '{$id}'");
+    if($delete){
+        $resp['status'] = 'success';
+        $this->settings->set_flashdata('success', "Rescue operation deleted successfully.");
+    } else {
+        $resp['status'] = 'failed';
+        $resp['error'] = $this->conn->error;
+    }
+    
+    return json_encode($resp);
+}
+
+// Add these functions in your Master.php file
+
+// Save or update donation
+function save_donation(){
+    global $_settings;
+    $resp = array('status'=>'failed','msg'=>'An error occurred while saving the data');
+    
+    if(empty($_POST['id'])){
+        // For new donations
+        if(empty($_POST['donation_id'])) {
+            $prefix = 'DON';
+            $date = date('Ymd');
+            $rand = sprintf("%04d", mt_rand(1, 9999));
+            $_POST['donation_id'] = $prefix . $date . $rand;
+        }
+        
+        // Set client_id to NULL if is_anonymous is 1
+        if($_POST['is_anonymous'] == 1) {
+            $_POST['client_id'] = NULL;
+        }
+        
+        $sql = "INSERT INTO `donations` (donation_id, client_id, PayPal_payment_ID, amount, message, donation_type, payment_status, donation_date, purpose, is_anonymous, receipt_sent) VALUES ('{$_POST['donation_id']}', " . (empty($_POST['client_id']) ? "NULL" : "'{$_POST['client_id']}'") . ", '{$_POST['PayPal_payment_ID']}', '{$_POST['amount']}', '{$_POST['message']}', '{$_POST['donation_type']}', '{$_POST['payment_status']}', '{$_POST['donation_date']}', '{$_POST['purpose']}', '{$_POST['is_anonymous']}', '{$_POST['receipt_sent']}')";
+    } else {
+        // For updating donations
+        // Set client_id to NULL if is_anonymous is 1
+        if($_POST['is_anonymous'] == 1) {
+            $_POST['client_id'] = NULL;
+        }
+        
+        $sql = "UPDATE `donations` SET donation_id = '{$_POST['donation_id']}', client_id = " . (empty($_POST['client_id']) ? "NULL" : "'{$_POST['client_id']}'") . ", PayPal_payment_ID = '{$_POST['PayPal_payment_ID']}', amount = '{$_POST['amount']}', message = '{$_POST['message']}', donation_type = '{$_POST['donation_type']}', payment_status = '{$_POST['payment_status']}', donation_date = '{$_POST['donation_date']}', purpose = '{$_POST['purpose']}', is_anonymous = '{$_POST['is_anonymous']}', receipt_sent = '{$_POST['receipt_sent']}' WHERE id = '{$_POST['id']}'";
+    }
+    
+    @$save = $this->conn->query($sql);
+    
+    if($save){
+        $rid = empty($_POST['id']) ? $this->conn->insert_id : $_POST['id'];
+        $resp['status'] = 'success';
+        $resp['id'] = $rid;
+        if(empty($_POST['id']))
+            $resp['msg'] = "Donation has been added successfully.";
+        else
+            $resp['msg'] = "Donation has been updated successfully.";
+    }else{
+        $resp['msg'] = "Error: " . $this->conn->error;
+        $resp['sql'] = $sql;
+    }
+    
+    return json_encode($resp);
+}
+
+// Delete donation
+function delete_donation(){
+    extract($_POST);
+    
+    @$delete = $this->conn->query("DELETE FROM `donations` where id = '{$id}'");
+    if($delete){
+        $resp['status'] = 'success';
+        $resp['msg'] = "Donation has been deleted successfully.";
+    }else{
+        $resp['status'] = 'failed';
+        $resp['error'] = $this->conn->error;
+    }
+    
+    return json_encode($resp);
+}
 	function capture_err(){
 		if(!$this->conn->error)
 			return false;
@@ -392,6 +751,15 @@ Class Master extends DBConnection {
 		if($save){
 			$resp['status'] = 'success';
 			$resp['cart_count'] = $this->conn->query("SELECT SUM(quantity) as items from `cart` where client_id =".$this->settings->userdata('id'))->fetch_assoc()['items'];
+			
+			// Add notification for cart update
+			$product_name = $this->conn->query("SELECT p.product_name FROM products p INNER JOIN inventory i ON p.id = i.product_id WHERE i.id = '{$inventory_id}'")->fetch_assoc()['product_name'];
+			$notification_title = "Cart Updated";
+			$notification_message = "Added {$quantity} x {$product_name} to your cart.";
+			$notif_sql = "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'cart')";
+			$notif_stmt = $this->conn->prepare($notif_sql);
+			$notif_stmt->bind_param("iss", $this->settings->userdata('id'), $notification_title, $notification_message);
+			$notif_stmt->execute();
 		}else{
 			$resp['status'] = 'failed';
 			$resp['err'] = $this->conn->error."[{$sql}]";
@@ -493,6 +861,23 @@ Class Master extends DBConnection {
 				$save_sales = $this->conn->query("INSERT INTO `sales` set $data");
 				if($this->capture_err())
 					return $this->capture_err();
+				
+				// Add single notification for admin/staff
+				$notification_title = "New Order Received";
+				$notification_message = "A new order #{$order_id} has been placed. Total amount: ₹{$amount}";
+				$notif_sql = "INSERT INTO user_notifications (user_id, title, message, type) VALUES (1, ?, ?, 'order')";
+				$notif_stmt = $this->conn->prepare($notif_sql);
+				$notif_stmt->bind_param("ss", $notification_title, $notification_message);
+				$notif_stmt->execute();
+				
+				// Add notification for client
+				$notification_title = "Order Placed Successfully";
+				$notification_message = "Your order #{$order_id} has been placed successfully. Total amount: ₹{$amount}";
+				$notif_sql = "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'order')";
+				$notif_stmt = $this->conn->prepare($notif_sql);
+				$notif_stmt->bind_param("iss", $client_id, $notification_title, $notification_message);
+				$notif_stmt->execute();
+				
 				$resp['status'] ='success';
 			}else{
 				$resp['status'] ='failed';
@@ -510,6 +895,26 @@ Class Master extends DBConnection {
 		extract($_POST);
 		$update = $this->conn->query("UPDATE `orders` set `status` = '$status' where id = '{$id}' ");
 		if($update){
+			// Get order details and client info
+			$order_details = $this->conn->query("SELECT o.*, c.email FROM orders o INNER JOIN clients c ON o.client_id = c.id WHERE o.id = '{$id}'")->fetch_assoc();
+			
+			// Map status codes to readable status
+			$status_map = array(
+				'0' => 'Pending',
+				'1' => 'Packed',
+				'2' => 'Out for Delivery',
+				'3' => 'Delivered',
+				'4' => 'Cancelled'
+			);
+			
+			// Create notification
+			$notification_title = "Order Status Updated";
+			$notification_message = "Your order #{$id} status has been updated to: " . $status_map[$status];
+			$notif_sql = "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'order_status')";
+			$notif_stmt = $this->conn->prepare($notif_sql);
+			$notif_stmt->bind_param("iss", $order_details['client_id'], $notification_title, $notification_message);
+			$notif_stmt->execute();
+			
 			$resp['status'] ='success';
 			$this->settings->set_flashdata("success"," Order status successfully updated.");
 		}else{
@@ -522,6 +927,15 @@ Class Master extends DBConnection {
 		extract($_POST);
 		$update = $this->conn->query("UPDATE `orders` set `paid` = '1' where id = '{$id}' ");
 		if($update){
+			// Add notification for payment
+			$order_details = $this->conn->query("SELECT o.*, c.email FROM orders o INNER JOIN clients c ON o.client_id = c.id WHERE o.id = '{$id}'")->fetch_assoc();
+			$notification_title = "Payment Received";
+			$notification_message = "Payment of ₹{$order_details['amount']} for order #{$id} has been received successfully.";
+			$notif_sql = "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'payment')";
+			$notif_stmt = $this->conn->prepare($notif_sql);
+			$notif_stmt->bind_param("iss", $order_details['client_id'], $notification_title, $notification_message);
+			$notif_stmt->execute();
+			
 			$resp['status'] ='success';
 			$this->settings->set_flashdata("success"," Order payment status successfully updated.");
 		}else{
@@ -635,6 +1049,27 @@ switch ($action) {
 	break;
 	case 'delete_order':
 		echo $Master->delete_order();
+	break;
+	case 'save_animal':
+		echo $Master->save_animal();
+	break;
+	case 'delete_animal':
+		echo $Master->delete_animal();
+	break;
+	case 'update_application_status':
+		echo $Master->update_application_status();
+	break;
+	case 'update_rescue_status':
+		echo $Master->update_rescue_status();
+	break;
+	case 'delete_rescue':
+		echo $Master->delete_rescue();
+	break;
+	case 'save_donation':
+		echo $Master->save_donation();
+	break;
+	case 'delete_donation':
+		echo $Master->delete_donation();
 	break;
 	default:
 		// echo $sysset->index();

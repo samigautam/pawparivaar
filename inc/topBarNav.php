@@ -41,6 +41,7 @@
     <li class="nav-item"><a class="nav-link" href="http://localhost/pawparivaar/ovas">VET Appointment</a></li>
     <li class="nav-item"><a class="nav-link" href="http://localhost/pawparivaar/map/index.html">Rescue</a></li>
     <li class="nav-item"><a class="nav-link" href="http://localhost/pawparivaar/donation_form.php">Donate</a></li>
+    <li class="nav-item"><a class="nav-link" href="http://localhost/pawparivaar/adoption/browse_animals.php">Adopt</a></li>
 </ul>
 
                     <div class="d-flex align-items-center">
@@ -61,6 +62,19 @@
                               ?>
                             </span>
                         </a>
+                        
+                        <?php if(isset($_SESSION['userdata']['id'])): ?>
+                        <a class="text-dark mr-2 nav-link" href="./?p=notifications">
+                            <i class="bi-bell-fill me-1"></i>
+                            Notifications
+                            <span class="badge bg-danger text-white ms-1 rounded-pill" id="notification-count">
+                              <?php 
+                                $notif_count = $conn->query("SELECT COUNT(*) as count from `notifications` where user_id =".$_settings->userdata('id')." AND is_read = 0")->fetch_assoc()['count'];
+                                echo ($notif_count > 0 ? $notif_count : 0);
+                              ?>
+                            </span>
+                        </a>
+                        <?php endif; ?>
                         
                             <a href="./?p=my_account" class="text-dark  nav-link"><b><?php echo $_settings->userdata('firstname')?></b></a>
                             <a href="logout.php" class="text-dark  nav-link"><i class="fa fa-sign-out-alt"></i></a>

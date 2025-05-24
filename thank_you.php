@@ -18,8 +18,8 @@ $donation_id = isset($_GET['donation_id']) ? htmlspecialchars($_GET['donation_id
     <title>Thank You For Your Donation</title>
     <style>
         :root {
-            --primary-color: #4caf50;
-            --secondary-color: #ff8c00;
+            --primary-color:rgb(25, 35, 26);
+            --secondary-color:rgb(60, 28, 114);
         }
         
         body {
@@ -145,7 +145,7 @@ $donation_id = isset($_GET['donation_id']) ? htmlspecialchars($_GET['donation_id
         <p>Your support means the world to the animals in our care.</p>
         
         <div class="donation-amount">
-            $<?php echo $amount; ?>
+            Rs.<?php echo $amount; ?>
         </div>
         
         <div class="impact-message">

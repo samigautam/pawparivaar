@@ -71,8 +71,64 @@
                         </p>
                       </a>
                     </li>
+                    <li class="nav-item dropdown">
+                      <a href="<?php echo base_url ?>admin/?page=animalsforadoption" class="nav-link nav-animalsforadoption">
+                        <i class="nav-icon fas fa-list"></i>
+                        <p>
+                          Animals for Adoption
+                        </p>
+                      </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                      <a href="<?php echo base_url ?>admin/?page=adoptionapplications" class="nav-link nav-adoptionapplications">
+                        <i class="nav-icon fas fa-box"></i>
+                        <p>
+                          Adoption Applications
+                        </p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="<?php echo base_url ?>admin/?page=rescueoperations" class="nav-link nav-rescueoperations">
+                        <i class="nav-icon fas fa-question-circle"></i>
+                        <p>
+                          Rescue Operations
+                        </p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="<?php echo base_url ?>admin/?page=donations" class="nav-link nav-donations">
+                        <i class="nav-icon fas fa-calendar-day"></i>
+                        <p>
+                          Donations
+                        </p>
+                      </a>
+                    </li>
+                    <li class="nav-item">
+                      <a href="<?php echo base_url ?>admin/?page=notifications" class="nav-link nav-notifications">
+                        <i class="nav-icon fas fa-bell"></i>
+                        <p>
+                          Notifications
+                          <?php 
+                          $unread = $conn->query("SELECT COUNT(*) as count FROM user_notifications WHERE is_read = 0")->fetch_assoc()['count'];
+                          if($unread > 0):
+                          ?>
+                          <span class="badge badge-danger badge-pill"><?php echo $unread ?></span>
+                          <?php endif; ?>
+                        </p>
+                      </a>
+                    </li>
                     <!-- Maintenance Section (Visible only to Admins) -->
-        <?php if (isset($_SESSION['userdata']['login_type']) && $_SESSION['userdata']['login_type'] == 1): ?>
+        <?php
+        
+
+        // Check if type is set and valid
+        if (!isset($_SESSION['userdata']) || !isset($_SESSION['userdata']['type'])) {
+            error_log("Session or type not set. Check login implementation.");
+        } else {
+            error_log("type: " . $_SESSION['userdata']['type']);
+        }
+        ?>
+        <?php if (isset($_SESSION['userdata']) && isset($_SESSION['userdata']['type']) && $_SESSION['userdata']['type'] == 1): ?>
             <li class="nav-header">Maintenance</li>
             <li class="nav-item dropdown">
                 <a href="<?php echo base_url ?>admin/?page=categories" class="nav-link nav-categories">

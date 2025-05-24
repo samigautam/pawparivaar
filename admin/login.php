@@ -49,7 +49,7 @@
         <a href="forgot-password.html">I forgot my password</a>
       </p> -->
       
-    </div>
+          </div>
     <!-- /.card-body -->
   </div>
   <!-- /.card -->
@@ -68,5 +68,84 @@
     end_loader();
   })
 </script>
+
+<?php
+
+
+// Fetch user data from the database
+$query = "SELECT id, username, type FROM users WHERE username = ? AND password = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("ss", $username, $password);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $user = $result->fetch_assoc();
+    $_SESSION['userdata'] = [
+        'id' => $user['id'],
+        'username' => $user['username'],
+        'type' => $user['type'], // Use 'type' from the database
+    ];
+    header("Location: admin/dashboard.php");
+    exit;
+} 
+
+// Handle avatar update logic
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_avatar'])) {
+    $userId = $_SESSION['userdata']['id'];
+    $username = trim($_POST['username']); // Trim to avoid unnecessary spaces
+    $newAvatar = $_FILES['avatar']['name'];
+    $avatarTmpPath = $_FILES['avatar']['tmp_name'];
+    $uploadDir = '../uploads/avatars/';
+    $avatarPath = $uploadDir . basename($newAvatar);
+
+    // Check if username already exists for other users
+    $query = "SELECT id FROM users WHERE username = ? AND id != ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("si", $username, $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        echo "Username already exists.";
+    } else {
+        // Move uploaded file to the target directory
+        if (!empty($newAvatar)) {
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true); // Create directory if it doesn't exist
+            }
+            if (move_uploaded_file($avatarTmpPath, $avatarPath)) {
+                // Update avatar and username
+                $updateQuery = "UPDATE users SET username = ?, avatar = ? WHERE id = ?";
+                $stmt = $conn->prepare($updateQuery);
+                $stmt->bind_param("ssi", $username, $newAvatar, $userId);
+                if ($stmt->execute()) {
+                    echo "Profile updated successfully.";
+                    // Update session data
+                    $_SESSION['userdata']['username'] = $username;
+                    $_SESSION['userdata']['avatar'] = $newAvatar;
+                } else {
+                    echo "Error updating profile.";
+                }
+            } else {
+                echo "Error uploading avatar.";
+            }
+        } else {
+            // Update only the username if no avatar is uploaded
+            $updateQuery = "UPDATE users SET username = ? WHERE id = ?";
+            $stmt = $conn->prepare($updateQuery);
+            $stmt->bind_param("si", $username, $userId);
+            if ($stmt->execute()) {
+                echo "Profile updated successfully.";
+                // Update session data
+                $_SESSION['userdata']['username'] = $username;
+            } else {
+                echo "Error updating profile.";
+            }
+        }
+    }
+}
+?>
+
 </body>
 </html>

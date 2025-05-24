@@ -31,6 +31,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("ssssddsisd", $name, $email, $phone, $location_name, $latitude, $longitude, $animal_type, $animal_count, $animal_condition, $additional_details);
     
     if ($stmt->execute()) {
+        // Get the client ID from the email
+        $client_query = $conn->prepare("SELECT id FROM clients WHERE email = ?");
+        $client_query->bind_param("s", $email);
+        $client_query->execute();
+        $client_result = $client_query->get_result();
+        
+        if($client_result->num_rows > 0) {
+            $client = $client_result->fetch_assoc();
+            $client_id = $client['id'];
+            
+            // Send notification to the client
+            $notification_title = "Rescue Request Submitted";
+            $notification_message = "Your rescue request for " . $animal_type . " has been submitted successfully. Our team will review your request and get back to you soon.";
+            
+            $notif_sql = "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'rescue')";
+            $notif_stmt = $conn->prepare($notif_sql);
+            $notif_stmt->bind_param("iss", $client_id, $notification_title, $notification_message);
+            $notif_stmt->execute();
+            
+            // Send single notification for admin/staff
+            $admin_notif_title = "New Rescue Request";
+            $admin_notif_message = "A new rescue request has been submitted for " . $animal_type . " at " . $location_name . ". Please review the request.";
+            $admin_notif_sql = "INSERT INTO user_notifications (user_id, title, message, type) VALUES (1, ?, ?, 'rescue')";
+            $admin_notif_stmt = $conn->prepare($admin_notif_sql);
+            $admin_notif_stmt->bind_param("ss", $admin_notif_title, $admin_notif_message);
+            $admin_notif_stmt->execute();
+        }
+        
         // Redirect to confirmation page or show success message
         echo "<script>
                 alert('Rescue operation request submitted successfully!');
